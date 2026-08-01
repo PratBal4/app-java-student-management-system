@@ -22,4 +22,4 @@ if ! command -v java &> /dev/null; then
 fi
 
 echo "Running the application..."
-java --enable-native-access=ALL-UNNAMED -cp "lib/sqlite-jdbc.jar:lib/slf4j-api.jar:lib/slf4j-simple.jar:src" AppGUI
+java --enable-native-access=ALL-UNNAMED -cp "lib/sqlite-jdbc.jar:lib/slf4j-api.jar:lib/slf4j-simple.jar:src" Main "$@"

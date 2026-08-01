@@ -178,9 +178,4 @@ public class AppGUI extends JFrame {
             model.addRow(new Object[]{s.getId(), s.getName(), s.getRollNo(), s.getDepartment()});
         }
     }
-
-    public static void main(String[] args) {
-        Database.initializeDatabase();
-        SwingUtilities.invokeLater(() -> new AppGUI().setVisible(true));
-    }
 }

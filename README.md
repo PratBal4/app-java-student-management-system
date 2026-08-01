@@ -12,10 +12,13 @@ A simple desktop-based **Student Management System** built using Java Swing for 
 
 The project is structured into three main layers, following a simplified MVC (Model-View-Controller) / DAO (Data Access Object) pattern:
 
-1. **`AppGUI.java` (View & Controller):** 
+1. **`Main.java` (Entrypoint):**
+   - Routes execution to either the graphical UI (`AppGUI`) or the command-line interface (`AppCLI`) based on startup arguments.
+2. **`AppGUI.java` (Graphical UI):** 
    - Handles the Java Swing interface (buttons, text fields, table, and the Side Panel).
    - Listens to user interactions and routes them to the DAO layer.
-   - Refreshes the UI (like updating the table) whenever data changes.
+3. **`AppCLI.java` (Command Line UI):**
+   - Provides an interactive text-based menu for terminal users, complete with search pagination and precise modification controls.
 2. **`StudentDAO.java` (Data Access Object):**
    - The intermediary between the UI and the database.
    - Contains static methods (`addStudent`, `getAllStudents`, `updateStudent`, `deleteStudent`) that safely execute raw SQL queries (`INSERT`, `SELECT`, `UPDATE`, `DELETE`) using `PreparedStatement`s to prevent SQL injection.
@@ -72,29 +75,35 @@ For your convenience, build and run scripts have been provided for different ope
    ```bash
    ./build.sh
    ```
-4. Run the application:
-   ```bash
-   ./run.sh
-   ```
+### Running in GUI Mode
+**macOS/Linux:**
+```bash
+./run.sh
+```
+**Windows:**
+```cmd
+.\run.bat
+```
 
-### On Windows
-1. Open Command Prompt or PowerShell in the project directory.
-2. Compile the project:
-   ```cmd
-   .\build.bat
-   ```
-3. Run the application:
-   ```cmd
-   .\run.bat
-   ```
+### Running in CLI Mode (Command Line)
+If you prefer a terminal-based interface (which is particularly great for headless Docker containers), just pass the `CLI` argument:
+**macOS/Linux:**
+```bash
+./run.sh CLI
+```
+**Windows:**
+```cmd
+.\run.bat CLI
+```
 
 *(Note: The build scripts will now intelligently check if Java is installed and offer to automatically install it via `brew`, `apt`, or `winget` if it is missing!)*
 
 ## ✨ Features
+- **Dual Interfaces:** Seamlessly switch between a full desktop GUI or a fast interactive CLI.
 - **Add Student:** Insert a student's Name, Roll No, and Department into the SQLite database.
-- **Edit Student (Side Panel):** Select a student from the table, click "Edit Selected", and a side panel will dynamically open allowing you to update and save any parameter.
-- **View Students:** Automatically lists all students fetched from the database in a table.
-- **Delete Student:** Select a student from the table and delete them directly from the database.
+- **Edit Student:** (GUI) Use the dynamic side panel. (CLI) Search and use the secondary filter prompt to accurately modify a specific field.
+- **Display Students:** (GUI) Lists all students in a table. (CLI) Search by any field and paginate through 10 rows at a time using 'up' and 'down' commands.
+- **Delete Student:** Select or search for a student and safely delete them from the database.
 
 ## 🐳 Docker Support
 

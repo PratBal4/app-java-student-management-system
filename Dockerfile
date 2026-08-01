@@ -20,5 +20,5 @@ COPY . /app
 # Compile the Java application
 RUN javac -cp "lib/sqlite-jdbc.jar:lib/slf4j-api.jar:lib/slf4j-simple.jar" src/*.java
 
-# Run the application
-CMD ["java", "--enable-native-access=ALL-UNNAMED", "-cp", "lib/sqlite-jdbc.jar:lib/slf4j-api.jar:lib/slf4j-simple.jar:src", "AppGUI"]
+# Run the application (ENTRYPOINT allows passing arguments like 'CLI')
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-cp", "lib/sqlite-jdbc.jar:lib/slf4j-api.jar:lib/slf4j-simple.jar:src", "Main"]
