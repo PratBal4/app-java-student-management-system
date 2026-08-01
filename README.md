@@ -4,12 +4,9 @@ A simple desktop-based **Student Management System** built using Java Swing for 
 
 ## 📸 Screenshots
 
-*(You can add your screenshots by placing image files inside a `screenshots/` directory and uncommenting/updating the markdown links below!)*
-
-<!--
 ![Main Screen](screenshots/main_screen.png)
 ![Edit Panel](screenshots/edit_panel.png)
--->
+
 
 ## 🏗 Project Architecture & Internal Workings
 
