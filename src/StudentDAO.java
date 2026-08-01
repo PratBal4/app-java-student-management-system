@@ -51,4 +51,20 @@ public class StudentDAO {
             return false;
         }
     }
+
+    public static boolean updateStudent(Student student) {
+        String sql = "UPDATE students SET name = ?, roll_no = ?, department = ? WHERE id = ?";
+        try (Connection conn = Database.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, student.getName());
+            pstmt.setString(2, student.getRollNo());
+            pstmt.setString(3, student.getDepartment());
+            pstmt.setInt(4, student.getId());
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
