@@ -105,8 +105,12 @@ While this project is a Desktop GUI application using Java Swing, it is fully su
 docker build -t student-management-sys .
 ```
 
-### 2. Run the Docker Container (Linux / macOS with XQuartz)
-To allow the Docker container to render the Java Swing GUI on your host machine, you must share your X11 socket and `DISPLAY` environment variable:
+### 2. Run the Docker Container
+
+Running a graphical UI container depends on your operating system:
+
+#### Option A: On Linux (Native X11)
+To allow the Docker container to render the Java Swing GUI on your host machine, you must share your X11 socket and `DISPLAY`:
 ```bash
 # Allow local connections to X11 (run on host machine)
 xhost +local:
@@ -117,6 +121,24 @@ docker run -it --rm \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
   student-management-sys
 ```
+
+#### Option B: On macOS (Using XQuartz)
+Because macOS doesn't use X11 natively, the Linux method will throw errors. You must use XQuartz:
+1. Install XQuartz: `brew install --cask xquartz`
+2. Open XQuartz, go to **Preferences > Security** and check **"Allow connections from network clients"**.
+3. **Restart XQuartz** (or restart your Mac).
+4. Run this in your macOS terminal to allow connections:
+   ```bash
+   xhost +localhost
+   ```
+5. Run the container using `host.docker.internal`:
+   ```bash
+   docker run -it --rm \
+     -e DISPLAY=host.docker.internal:0 \
+     student-management-sys
+   ```
+
+#### Option C: On Windows
 *(Note for Windows Users: Running Docker X11 GUI applications requires an X Server installed on Windows like VcXsrv or Xming, and configuring the DISPLAY variable to your host IP).*
 
 ## 🤝 Git & Collaboration
