@@ -1,10 +1,12 @@
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class Database {
-    private static final String URL = "jdbc:sqlite:students.db";
+    private static final String DIR = "database";
+    private static final String URL = "jdbc:sqlite:" + DIR + "/students.db";
 
     public static Connection connect() throws SQLException {
         try {
@@ -16,6 +18,11 @@ public class Database {
     }
 
     public static void initializeDatabase() {
+        File directory = new File(DIR);
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+
         String sql = "CREATE TABLE IF NOT EXISTS students (" +
                      "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                      "name TEXT NOT NULL, " +

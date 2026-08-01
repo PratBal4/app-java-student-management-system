@@ -32,6 +32,8 @@ If you delete a row, you may notice that the `ID` counter does not reset or shif
 
 ```text
 📁 StudentManagementSystem/
+├── database/                (Local Database Storage - Ignored by Git)
+│   └── students.db          (Generated automatically when app runs)
 ├── lib/
 │   ├── slf4j-api.jar        (SLF4J Logging API)
 │   ├── slf4j-simple.jar     (SLF4J Simple Binding)
@@ -44,8 +46,13 @@ If you delete a row, you may notice that the `ID` counter does not reset or shif
 ├── build.sh                 (Compilation script for macOS/Linux)
 ├── run.sh                   (Execution script for macOS/Linux)
 ├── build.bat                (Compilation script for Windows)
-└── run.bat                  (Execution script for Windows)
+├── run.bat                  (Execution script for Windows)
+└── Dockerfile               (Docker container specification)
 ```
+
+### Database Behavior & Architecture Note
+- **Isolated Database:** The database file (`database/students.db`) is completely isolated and ignored by Git. When a new team member clones this repository and runs the application, a fresh database folder and file will be automatically created on their local machine.
+- **SQLite ID Counter:** If you delete a row, you may notice that the `ID` counter does not reset or shift backward for remaining rows. This is an intended feature of relational databases utilizing `AUTOINCREMENT` primary keys. IDs are meant to be immutable, unique identifiers for the entire lifecycle of a database. Re-using old IDs can accidentally corrupt data relations in larger, complex databases.
 
 ## 🛠 Prerequisites
 
@@ -74,14 +81,14 @@ For your convenience, build and run scripts have been provided for different ope
 1. Open Command Prompt or PowerShell in the project directory.
 2. Compile the project:
    ```cmd
-   build.bat
+   .\build.bat
    ```
 3. Run the application:
    ```cmd
-   run.bat
+   .\run.bat
    ```
 
-*(Note: The `run` scripts automatically include the `--enable-native-access=ALL-UNNAMED` flag to suppress warnings related to the SQLite native JDBC driver loading on Java 22+).*
+*(Note: The build scripts will now intelligently check if Java is installed and offer to automatically install it via `brew`, `apt`, or `winget` if it is missing!)*
 
 ## ✨ Features
 - **Add Student:** Insert a student's Name, Roll No, and Department into the SQLite database.
@@ -91,11 +98,26 @@ For your convenience, build and run scripts have been provided for different ope
 
 ## 🐳 Docker Support
 
-While this project is written in Java and Java can easily run in Docker containers, **this specific project is a Desktop GUI application using Java Swing.** 
+While this project is a Desktop GUI application using Java Swing, it is fully supported via Docker by utilizing X11 forwarding.
 
-Docker containers are traditionally "headless" (they do not have graphical displays). Running a GUI application inside Docker requires advanced configurations like mapping the host's X11 socket to the container or running a VNC server inside the container. 
+### 1. Build the Docker Image
+```bash
+docker build -t student-management-sys .
+```
 
-For standard desktop use, it is highly recommended to run this natively using the provided `run.sh` or `run.bat` scripts rather than Docker.
+### 2. Run the Docker Container (Linux / macOS with XQuartz)
+To allow the Docker container to render the Java Swing GUI on your host machine, you must share your X11 socket and `DISPLAY` environment variable:
+```bash
+# Allow local connections to X11 (run on host machine)
+xhost +local:
+
+# Run the container with X11 volume mapping
+docker run -it --rm \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  student-management-sys
+```
+*(Note for Windows Users: Running Docker X11 GUI applications requires an X Server installed on Windows like VcXsrv or Xming, and configuring the DISPLAY variable to your host IP).*
 
 ## 🤝 Git & Collaboration
 This project has been initialized as a Git repository. To collaborate and push this to a remote private repository, you can run the following commands:
