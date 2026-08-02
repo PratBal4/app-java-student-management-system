@@ -18,18 +18,25 @@ public class DynamicDAO {
         return DriverManager.getConnection("jdbc:sqlite:" + dbPath);
     }
 
-    public void initializeDefaultDatabase() {
-        String sql = "CREATE TABLE IF NOT EXISTS students (" +
-                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                     "name TEXT NOT NULL, " +
-                     "roll_no TEXT NOT NULL UNIQUE, " +
-                     "department TEXT NOT NULL" +
-                     ");";
+    public boolean createTable(String tableName, Map<String, String> columnDefinitions) {
+        if (columnDefinitions.isEmpty()) return false;
+        
+        StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" (");
+        int count = 0;
+        for (Map.Entry<String, String> entry : columnDefinitions.entrySet()) {
+            if (count > 0) sql.append(", ");
+            sql.append(entry.getKey()).append(" ").append(entry.getValue());
+            count++;
+        }
+        sql.append(");");
+
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+            stmt.execute(sql.toString());
+            return true;
         } catch (SQLException e) {
-            System.err.println("Database init error: " + e.getMessage());
+            System.err.println("Error creating table: " + e.getMessage());
+            return false;
         }
     }
 

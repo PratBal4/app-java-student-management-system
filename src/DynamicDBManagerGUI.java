@@ -28,7 +28,7 @@ public class DynamicDBManagerGUI extends JFrame {
                 for (File f : files) dbFiles.add(f.getName());
             }
 
-            dbFiles.add("++ Create students.db ++");
+            dbFiles.add("++ Create New Database ++");
             
             JPanel panel = new JPanel(new BorderLayout(10, 10));
             JComboBox<String> fileCombo = new JComboBox<>(dbFiles.toArray(new String[0]));
@@ -55,12 +55,16 @@ public class DynamicDBManagerGUI extends JFrame {
                 String selected = (String) fileCombo.getSelectedItem();
                 if (selected != null) {
                     if (selected.startsWith("++")) {
-                        dao = new DynamicDAO("database/students.db");
-                        dao.initializeDefaultDatabase();
+                        String newDbName = JOptionPane.showInputDialog(null, "Enter new database name (e.g., inventory.db):");
+                        if (newDbName != null && !newDbName.trim().isEmpty()) {
+                            if (!newDbName.endsWith(".db")) newDbName += ".db";
+                            dao = new DynamicDAO("database/" + newDbName);
+                            break;
+                        }
                     } else {
                         dao = new DynamicDAO("database/" + selected);
+                        break;
                     }
-                    break;
                 }
             }
         }
@@ -78,14 +82,18 @@ public class DynamicDBManagerGUI extends JFrame {
         // Top Panel: Table Selector & Search
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         tableSelector = new JComboBox<>();
-        List<String> tables = dao.getTables();
-        for (String t : tables) tableSelector.addItem(t);
+        refreshTableSelector();
         
         tableSelector.addActionListener(e -> {
-            currentTable = (String) tableSelector.getSelectedItem();
-            currentSearchFilters.clear();
-            refreshTable();
+            if (tableSelector.getSelectedItem() != null) {
+                currentTable = (String) tableSelector.getSelectedItem();
+                currentSearchFilters.clear();
+                refreshTable();
+            }
         });
+
+        JButton createTableBtn = new JButton("Create Table");
+        createTableBtn.addActionListener(e -> openCreateTableDialog());
 
         JButton searchBtn = new JButton("Advanced Search");
         searchBtn.addActionListener(e -> openSearchPanel());
@@ -98,6 +106,7 @@ public class DynamicDBManagerGUI extends JFrame {
 
         topPanel.add(new JLabel("Table: "));
         topPanel.add(tableSelector);
+        topPanel.add(createTableBtn);
         topPanel.add(searchBtn);
         topPanel.add(clearSearchBtn);
 
@@ -259,6 +268,77 @@ public class DynamicDBManagerGUI extends JFrame {
                 refreshTable();
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to delete record.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    private void refreshTableSelector() {
+        tableSelector.removeAllItems();
+        List<String> tables = dao.getTables();
+        for (String t : tables) {
+            tableSelector.addItem(t);
+        }
+    }
+
+    private void openCreateTableDialog() {
+        String tableName = JOptionPane.showInputDialog(this, "Enter new table name:");
+        if (tableName == null || tableName.trim().isEmpty()) return;
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        
+        JPanel columnsPanel = new JPanel(new GridLayout(0, 3, 5, 5));
+        columnsPanel.add(new JLabel("Column Name"));
+        columnsPanel.add(new JLabel("Data Type"));
+        columnsPanel.add(new JLabel("Constraints (e.g. PRIMARY KEY)"));
+
+        List<JTextField> nameFields = new ArrayList<>();
+        List<JComboBox<String>> typeBoxes = new ArrayList<>();
+        List<JTextField> constraintFields = new ArrayList<>();
+
+        JButton addRowBtn = new JButton("Add Column");
+        addRowBtn.addActionListener(e -> {
+            JTextField nameField = new JTextField();
+            JComboBox<String> typeBox = new JComboBox<>(new String[]{"INTEGER", "TEXT", "REAL", "BLOB"});
+            JTextField constraintField = new JTextField();
+            
+            nameFields.add(nameField);
+            typeBoxes.add(typeBox);
+            constraintFields.add(constraintField);
+            
+            columnsPanel.add(nameField);
+            columnsPanel.add(typeBox);
+            columnsPanel.add(constraintField);
+            mainPanel.revalidate();
+            mainPanel.repaint();
+        });
+
+        // Add initial row
+        addRowBtn.doClick();
+
+        mainPanel.add(new JScrollPane(columnsPanel));
+        mainPanel.add(addRowBtn);
+
+        int result = JOptionPane.showConfirmDialog(this, mainPanel, "Create Table: " + tableName, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        
+        if (result == JOptionPane.OK_OPTION) {
+            Map<String, String> columnDefs = new LinkedHashMap<>();
+            for (int i = 0; i < nameFields.size(); i++) {
+                String name = nameFields.get(i).getText().trim();
+                if (name.isEmpty()) continue;
+                
+                String type = (String) typeBoxes.get(i).getSelectedItem();
+                String constraints = constraintFields.get(i).getText().trim();
+                
+                columnDefs.put(name, type + " " + constraints);
+            }
+            
+            if (dao.createTable(tableName, columnDefs)) {
+                JOptionPane.showMessageDialog(this, "Table '" + tableName + "' created successfully!");
+                refreshTableSelector();
+                tableSelector.setSelectedItem(tableName);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to create table.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

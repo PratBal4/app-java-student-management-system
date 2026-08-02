@@ -29,7 +29,7 @@ public class DynamicDBManagerCLI {
             
             System.out.println("\nOptions:");
             System.out.println("[number] Select a database");
-            System.out.println("[C] Create new default database (students.db)");
+            System.out.println("[C] Create new empty database");
             System.out.println("[D] Delete a database");
             System.out.println("[E] Exit");
             System.out.print("Choose an option: ");
@@ -39,9 +39,12 @@ public class DynamicDBManagerCLI {
                 System.out.println("Exiting...");
                 return;
             } else if (choice.equals("C")) {
-                dao = new DynamicDAO("database/students.db");
-                dao.initializeDefaultDatabase();
-                System.out.println("Created students.db. Proceeding...");
+                System.out.print("Enter new database name (e.g. inventory.db): ");
+                String newDb = scanner.nextLine().trim();
+                if (!newDb.endsWith(".db")) newDb += ".db";
+                dao = new DynamicDAO("database/" + newDb);
+                // Creating a connection to an empty file creates it in SQLite
+                System.out.println("Created " + newDb + ". Proceeding...");
                 handleTables();
             } else if (choice.equals("D")) {
                 System.out.print("Enter the number of the database to delete: ");
@@ -80,20 +83,28 @@ public class DynamicDBManagerCLI {
     private static void handleTables() {
         while (true) {
             List<String> tables = dao.getTables();
-            if (tables.isEmpty()) {
-                System.out.println("No tables found in this database. Returning to menu...");
-                return;
-            }
-
+            
             System.out.println("\n--- Tables ---");
-            for (int i = 0; i < tables.size(); i++) {
-                System.out.println((i + 1) + ". " + tables.get(i));
+            if (tables.isEmpty()) {
+                System.out.println("No tables found in this database.");
+            } else {
+                for (int i = 0; i < tables.size(); i++) {
+                    System.out.println((i + 1) + ". " + tables.get(i));
+                }
             }
-            System.out.println("0. Back");
-            System.out.print("Select a table: ");
+            System.out.println("0. Back to Database Selection");
+            System.out.println("C. Create New Table");
+            System.out.print("Select an option: ");
+            
+            String input = scanner.nextLine().trim().toUpperCase();
+            if (input.equals("0")) return;
+            if (input.equals("C")) {
+                createTableFromCLI();
+                continue;
+            }
+            
             try {
-                int choice = Integer.parseInt(scanner.nextLine().trim());
-                if (choice == 0) return;
+                int choice = Integer.parseInt(input);
                 if (choice > 0 && choice <= tables.size()) {
                     handleTableOperations(tables.get(choice - 1));
                 } else {
@@ -102,6 +113,32 @@ public class DynamicDBManagerCLI {
             } catch (NumberFormatException e) {
                 System.out.println("Invalid input.");
             }
+        }
+    }
+
+    private static void createTableFromCLI() {
+        System.out.print("Enter new table name: ");
+        String tableName = scanner.nextLine().trim();
+        if (tableName.isEmpty()) return;
+
+        Map<String, String> columns = new LinkedHashMap<>();
+        System.out.println("Add columns. Type 'DONE' when finished.");
+        
+        while (true) {
+            System.out.print("Enter column name (or 'DONE'): ");
+            String colName = scanner.nextLine().trim();
+            if (colName.equalsIgnoreCase("DONE")) break;
+            if (colName.isEmpty()) continue;
+
+            System.out.print("Enter type and constraints for '" + colName + "' (e.g. INTEGER PRIMARY KEY AUTOINCREMENT): ");
+            String constraints = scanner.nextLine().trim();
+            columns.put(colName, constraints);
+        }
+
+        if (dao.createTable(tableName, columns)) {
+            System.out.println("Success: Table '" + tableName + "' created!");
+        } else {
+            System.out.println("Error creating table.");
         }
     }
 

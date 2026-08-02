@@ -2,10 +2,13 @@
 
 A powerful, dynamically-rendered desktop application and CLI tool built using Java (Swing) for managing ANY SQLite database.
 
-## 📸 Screenshots
+## 🚀 Future Additions & Roadmap
 
-![Main Screen](screenshots/main_screen.png)
-![Edit Panel](screenshots/edit_panel.png)
+This project is continuously evolving. The following features are planned for future distribution:
+- **Pre-defined Templates:** One-click table generation for common systems (Schools, Inventory, Businesses).
+- **Template Maker:** An advanced UI to build, save, and distribute your own database schema templates.
+- **Enhanced UI/UX:** Better GUI frameworks and styling for a more modern desktop experience.
+- **MCP Server & Automation:** Integration with a Model Context Protocol (MCP) server for AI-driven database automation and autonomous data entry.
 
 ## 🏗 Project Architecture & Internal Workings
 
