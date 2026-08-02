@@ -1,32 +1,28 @@
-# Student Management System
+# Dynamic Database Manager (SQLite)
 
-A simple desktop-based **Student Management System** built using Java Swing for the graphical user interface (GUI) and SQLite for the database. 
+A powerful, dynamically-rendered desktop application and CLI tool built using Java (Swing) for managing ANY SQLite database.
 
 ## 📸 Screenshots
 
 ![Main Screen](screenshots/main_screen.png)
 ![Edit Panel](screenshots/edit_panel.png)
 
-
 ## 🏗 Project Architecture & Internal Workings
 
-The project is structured into three main layers, following a simplified MVC (Model-View-Controller) / DAO (Data Access Object) pattern:
+This project utilizes a completely dynamic DAO (Data Access Object) architecture, capable of reading and manipulating any SQLite database schema on the fly!
 
 1. **`Main.java` (Entrypoint):**
-   - Routes execution to either the graphical UI (`AppGUI`) or the command-line interface (`AppCLI`) based on startup arguments.
-2. **`AppGUI.java` (Graphical UI):** 
-   - Handles the Java Swing interface (buttons, text fields, table, and the Side Panel).
-   - Listens to user interactions and routes them to the DAO layer.
-3. **`AppCLI.java` (Command Line UI):**
-   - Provides an interactive text-based menu for terminal users, complete with search pagination and precise modification controls.
-2. **`StudentDAO.java` (Data Access Object):**
-   - The intermediary between the UI and the database.
-   - Contains static methods (`addStudent`, `getAllStudents`, `updateStudent`, `deleteStudent`) that safely execute raw SQL queries (`INSERT`, `SELECT`, `UPDATE`, `DELETE`) using `PreparedStatement`s to prevent SQL injection.
-3. **`Database.java` (Configuration):**
-   - Manages the SQLite database connection using the SQLite-JDBC driver.
-   - Creates the `students.db` file automatically on first run and ensures the `students` table schema exists.
-4. **`Student.java` (Model):**
-   - A standard Java Object (POJO) representing the structure of a single student record (id, name, rollNo, department).
+   - Routes execution to either the graphical UI (`DynamicDBManagerGUI`) or the command-line interface (`DynamicDBManagerCLI`) based on startup arguments.
+2. **`DynamicDBManagerGUI.java` (Graphical UI):** 
+   - Uses `JOptionPane` to prompt database selection at startup.
+   - Dynamically builds `JTable` columns and Advanced Search side panels by interrogating the selected database table schema.
+3. **`DynamicDBManagerCLI.java` (Command Line UI):**
+   - Provides an interactive text-based menu for terminal users.
+   - Features paginated results and an incremental Advanced Search filter (using the `add` keyword).
+4. **`DynamicDAO.java` (Data Access Object):**
+   - Connects to the SQLite database.
+   - Uses native `SELECT name FROM sqlite_master` and `PRAGMA table_info()` queries to discover tables and columns dynamically.
+   - Executes dynamic `INSERT`, `SELECT`, `UPDATE`, and `DELETE` commands based on maps of data.
 
 ### Database ID Behavior (Important Note)
 If you delete a row, you may notice that the `ID` counter does not reset or shift backward for remaining rows. This is an intended feature of relational databases utilizing `AUTOINCREMENT` primary keys. IDs are meant to be immutable, unique identifiers for the entire lifecycle of a database. Re-using old IDs can accidentally corrupt data relations in larger, complex databases.
@@ -34,7 +30,7 @@ If you delete a row, you may notice that the `ID` counter does not reset or shif
 ## 📁 Project Structure
 
 ```text
-📁 StudentManagementSystem/
+📁 DynamicDatabaseManager/
 ├── database/                (Local Database Storage - Ignored by Git)
 │   └── students.db          (Generated automatically when app runs)
 ├── lib/
@@ -42,10 +38,10 @@ If you delete a row, you may notice that the `ID` counter does not reset or shif
 │   ├── slf4j-simple.jar     (SLF4J Simple Binding)
 │   └── sqlite-jdbc.jar      (SQLite JDBC Driver)
 ├── src/
-│   ├── AppGUI.java          (Main GUI application)
-│   ├── Database.java        (Database connection & initialization)
-│   ├── Student.java         (Student model)
-│   └── StudentDAO.java      (Data Access Object)
+│   ├── Main.java                 (Entrypoint)
+│   ├── DynamicDBManagerGUI.java  (Main GUI application)
+│   ├── DynamicDBManagerCLI.java  (Main CLI application)
+│   └── DynamicDAO.java           (Dynamic Data Access Object)
 ├── build.sh                 (Compilation script for macOS/Linux)
 ├── run.sh                   (Execution script for macOS/Linux)
 ├── build.bat                (Compilation script for Windows)
