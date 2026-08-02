@@ -27,8 +27,6 @@ This project utilizes a completely dynamic DAO (Data Access Object) architecture
    - Uses native `SELECT name FROM sqlite_master` and `PRAGMA table_info()` queries to discover tables and columns dynamically.
    - Executes dynamic `INSERT`, `SELECT`, `UPDATE`, and `DELETE` commands based on maps of data.
 
-### Database ID Behavior (Important Note)
-If you delete a row, you may notice that the `ID` counter does not reset or shift backward for remaining rows. This is an intended feature of relational databases utilizing `AUTOINCREMENT` primary keys. IDs are meant to be immutable, unique identifiers for the entire lifecycle of a database. Re-using old IDs can accidentally corrupt data relations in larger, complex databases.
 
 ## 📁 Project Structure
 
@@ -52,19 +50,12 @@ If you delete a row, you may notice that the `ID` counter does not reset or shif
 └── Dockerfile               (Docker container specification)
 ```
 
-### Database Behavior & Architecture Note
-- **Isolated Database:** The database file (`database/students.db`) is completely isolated and ignored by Git. When a new team member clones this repository and runs the application, a fresh database folder and file will be automatically created on their local machine.
-- **SQLite ID Counter:** If you delete a row, you may notice that the `ID` counter does not reset or shift backward for remaining rows. This is an intended feature of relational databases utilizing `AUTOINCREMENT` primary keys. IDs are meant to be immutable, unique identifiers for the entire lifecycle of a database. Re-using old IDs can accidentally corrupt data relations in larger, complex databases.
+## 🚀 Setup & Execution
 
-## 🛠 Prerequisites
+### 1. Building the Project
+Before running the application, you must compile the Java source files. Build scripts are provided that will intelligently check if Java is installed and offer to automatically install it via `brew`, `apt`, or `winget` if it is missing!
 
-- **Java Development Kit (JDK)**: You need Java installed on your machine to compile and run this application. (Tested with OpenJDK).
-
-## 🚀 How to Compile & Run (Using Scripts)
-
-For your convenience, build and run scripts have been provided for different operating systems.
-
-### On macOS / Linux
+**On macOS / Linux:**
 1. Open your terminal in the project directory.
 2. Ensure the scripts are executable:
    ```bash
@@ -74,35 +65,46 @@ For your convenience, build and run scripts have been provided for different ope
    ```bash
    ./build.sh
    ```
-### Running in GUI Mode
-**macOS/Linux:**
+
+**On Windows:**
+1. Open Command Prompt in the project directory.
+2. Compile the project:
+   ```cmd
+   .\build.bat
+   ```
+
+### 2. Running the Program (GUI Mode)
+**On macOS / Linux:**
 ```bash
 ./run.sh
 ```
-**Windows:**
+
+**On Windows:**
 ```cmd
 .\run.bat
 ```
 
-### Running in CLI Mode (Command Line)
-If you prefer a terminal-based interface (which is particularly great for headless Docker containers), just pass the `CLI` argument:
-**macOS/Linux:**
+### 3. Running the Program (CLI Mode)
+If you prefer a terminal-based interface (which is particularly great for headless servers or remote SSH), just pass the `CLI` argument:
+
+**On macOS / Linux:**
 ```bash
 ./run.sh CLI
 ```
-**Windows:**
+
+**On Windows:**
 ```cmd
 .\run.bat CLI
 ```
 
-*(Note: The build scripts will now intelligently check if Java is installed and offer to automatically install it via `brew`, `apt`, or `winget` if it is missing!)*
-
 ## ✨ Features
 - **Dual Interfaces:** Seamlessly switch between a full desktop GUI or a fast interactive CLI.
-- **Add Student:** Insert a student's Name, Roll No, and Department into the SQLite database.
-- **Edit Student:** (GUI) Use the dynamic side panel. (CLI) Search and use the secondary filter prompt to accurately modify a specific field.
-- **Display Students:** (GUI) Lists all students in a table. (CLI) Search by any field and paginate through 10 rows at a time using 'up' and 'down' commands.
-- **Delete Student:** Select or search for a student and safely delete them from the database.
+- **Dynamic Schema Discovery:** Reads any SQLite database and auto-generates UI components based on `PRAGMA` queries.
+- **DDL Table Creation:** Dynamically construct and create tables with custom datatypes and constraints directly from the app.
+- **Add Record:** Dynamically insert rows into any discovered table.
+- **Edit Record:** Use the dynamically generated GUI side panel or CLI prompt to modify any field.
+- **Advanced Search:** Filter data across multiple columns simultaneously in both GUI and CLI.
+- **Delete Record:** Accurately target and delete rows.
 
 ## 🐳 Docker Support
 
@@ -145,6 +147,8 @@ Because macOS doesn't use X11 natively, the Linux method will throw errors. You 
      -e DISPLAY=host.docker.internal:0 \
      student-management-sys
    ```
+
+*(Note: To run the CLI version via Docker without X11, simply append `CLI` to the run command: `docker run -it --rm student-management-sys CLI`)*
 
 #### Option C: On Windows
 *(Note for Windows Users: Running Docker X11 GUI applications requires an X Server installed on Windows like VcXsrv or Xming, and configuring the DISPLAY variable to your host IP).*
