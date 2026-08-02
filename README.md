@@ -33,7 +33,7 @@ This project utilizes a completely dynamic DAO (Data Access Object) architecture
 ```text
 📁 DynamicDatabaseManager/
 ├── database/                (Local Database Storage - Ignored by Git)
-│   └── students.db          (Generated automatically when app runs)
+│   └── (Databases you create or open will be saved here)
 ├── lib/
 │   ├── slf4j-api.jar        (SLF4J Logging API)
 │   ├── slf4j-simple.jar     (SLF4J Simple Binding)
@@ -101,10 +101,7 @@ If you prefer a terminal-based interface (which is particularly great for headle
 - **Dual Interfaces:** Seamlessly switch between a full desktop GUI or a fast interactive CLI.
 - **Dynamic Schema Discovery:** Reads any SQLite database and auto-generates UI components based on `PRAGMA` queries.
 - **DDL Table Creation:** Dynamically construct and create tables with custom datatypes and constraints directly from the app.
-- **Add Record:** Dynamically insert rows into any discovered table.
-- **Edit Record:** Use the dynamically generated GUI side panel or CLI prompt to modify any field.
-- **Advanced Search:** Filter data across multiple columns simultaneously in both GUI and CLI.
-- **Delete Record:** Accurately target and delete rows.
+- **CRUD Operations:** Accurately target and manipulate rows via dynamic insertions, updates, advanced multi-column filtering, and deletion.
 
 ## 🐳 Docker Support
 
