@@ -108,50 +108,18 @@ If you prefer a terminal-based interface (which is particularly great for headle
 
 ## 🐳 Docker Support
 
-While this project is a Desktop GUI application using Java Swing, it is fully supported via Docker by utilizing X11 forwarding.
+To avoid the complexity of setting up desktop environments and X11 forwarding, the Docker container is designed to run the Command Line Interface (CLI) out of the box. This provides a fast, fully-functional headless database manager!
 
 ### 1. Build the Docker Image
 ```bash
-docker build -t student-management-sys .
+docker build -t dynamic-db-manager .
 ```
 
-### 2. Run the Docker Container
-
-Running a graphical UI container depends on your operating system:
-
-#### Option A: On Linux (Native X11)
-To allow the Docker container to render the Java Swing GUI on your host machine, you must share your X11 socket and `DISPLAY`:
+### 2. Run the Container
+Run the container interactively:
 ```bash
-# Allow local connections to X11 (run on host machine)
-xhost +local:
-
-# Run the container with X11 volume mapping
-docker run -it --rm \
-  -e DISPLAY=$DISPLAY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  student-management-sys
+docker run -it --rm dynamic-db-manager CLI
 ```
-
-#### Option B: On macOS (Using XQuartz)
-Because macOS doesn't use X11 natively, the Linux method will throw errors. You must use XQuartz:
-1. Install XQuartz: `brew install --cask xquartz`
-2. Open XQuartz, go to **Preferences > Security** and check **"Allow connections from network clients"**.
-3. **Restart XQuartz** (or restart your Mac).
-4. Run this in your macOS terminal to allow connections:
-   ```bash
-   xhost +localhost
-   ```
-5. Run the container using `host.docker.internal`:
-   ```bash
-   docker run -it --rm \
-     -e DISPLAY=host.docker.internal:0 \
-     student-management-sys
-   ```
-
-*(Note: To run the CLI version via Docker without X11, simply append `CLI` to the run command: `docker run -it --rm student-management-sys CLI`)*
-
-#### Option C: On Windows
-*(Note for Windows Users: Running Docker X11 GUI applications requires an X Server installed on Windows like VcXsrv or Xming, and configuring the DISPLAY variable to your host IP).*
 
 ## 🤝 Git & Collaboration
 This project has been initialized as a Git repository. To collaborate and push this to a remote private repository, you can run the following commands:
