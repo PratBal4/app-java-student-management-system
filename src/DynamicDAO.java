@@ -40,6 +40,30 @@ public class DynamicDAO {
         }
     }
 
+    public boolean dropTable(String tableName) {
+        String sql = "DROP TABLE IF EXISTS " + tableName;
+        try (Connection conn = connect();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Error dropping table: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean renameTable(String oldName, String newName) {
+        String sql = "ALTER TABLE " + oldName + " RENAME TO " + newName;
+        try (Connection conn = connect();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Error renaming table: " + e.getMessage());
+            return false;
+        }
+    }
+
     public List<String> getTables() {
         List<String> tables = new ArrayList<>();
         String sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";

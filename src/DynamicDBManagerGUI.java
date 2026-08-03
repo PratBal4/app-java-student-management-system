@@ -1,6 +1,8 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,11 +11,9 @@ import java.util.List;
 
 public class DynamicDBManagerGUI extends JFrame {
     private DynamicDAO dao;
-    private JTable table;
-    private DefaultTableModel tableModel;
-    private JComboBox<String> tableSelector;
-    private String currentTable = "";
-    private Map<String, String> currentSearchFilters = new HashMap<>();
+    private JTabbedPane tabbedPane;
+    private JList<String> tableList;
+    private DefaultListModel<String> listModel;
 
     public void start() {
         File dbFolder = new File("database");
@@ -70,135 +70,240 @@ public class DynamicDBManagerGUI extends JFrame {
         }
         
         initializeMainGUI();
+        
+        // Initial state check
+        List<String> tables = dao.getTables();
+        if (tables.isEmpty()) {
+            int res = JOptionPane.showConfirmDialog(this, "No tables found in this database. Would you like to create one?", "No Tables", JOptionPane.YES_NO_OPTION);
+            if (res == JOptionPane.YES_OPTION) {
+                openCreateTableDialog();
+            }
+        }
     }
 
     private void initializeMainGUI() {
         setTitle("Dynamic Database Manager");
-        setSize(900, 600);
+        setSize(1000, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Top Panel: Table Selector & Search
+        // Top Panel: Actions for active tab
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        tableSelector = new JComboBox<>();
-        refreshTableSelector();
-        
-        tableSelector.addActionListener(e -> {
-            if (tableSelector.getSelectedItem() != null) {
-                currentTable = (String) tableSelector.getSelectedItem();
-                currentSearchFilters.clear();
-                refreshTable();
-            }
-        });
-
-        JButton createTableBtn = new JButton("Create Table");
-        createTableBtn.addActionListener(e -> openCreateTableDialog());
-
         JButton searchBtn = new JButton("Advanced Search");
-        searchBtn.addActionListener(e -> openSearchPanel());
-
         JButton clearSearchBtn = new JButton("Clear Search");
-        clearSearchBtn.addActionListener(e -> {
-            currentSearchFilters.clear();
-            refreshTable();
-        });
+        JButton addBtn = new JButton("Add Record");
+        JButton editBtn = new JButton("Edit Selected");
+        JButton deleteBtn = new JButton("Delete Selected");
 
-        topPanel.add(new JLabel("Table: "));
-        topPanel.add(tableSelector);
-        topPanel.add(createTableBtn);
+        searchBtn.addActionListener(e -> openSearchPanel());
+        clearSearchBtn.addActionListener(e -> clearSearch());
+        addBtn.addActionListener(e -> openRecordPanel(false));
+        editBtn.addActionListener(e -> openRecordPanel(true));
+        deleteBtn.addActionListener(e -> deleteSelectedRecord());
+
+        topPanel.add(addBtn);
+        topPanel.add(editBtn);
+        topPanel.add(deleteBtn);
+        topPanel.add(new JSeparator(SwingConstants.VERTICAL));
         topPanel.add(searchBtn);
         topPanel.add(clearSearchBtn);
 
         add(topPanel, BorderLayout.NORTH);
 
-        // Center Panel: Data Table
-        tableModel = new DefaultTableModel();
-        table = new JTable(tableModel);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        // Center Panel: Tabbed Pane
+        tabbedPane = new JTabbedPane();
+        add(tabbedPane, BorderLayout.CENTER);
 
-        // Bottom Panel: Add, Modify, Delete
-        JPanel bottomPanel = new JPanel();
-        JButton addBtn = new JButton("Add Record");
-        JButton editBtn = new JButton("Edit Selected");
-        JButton deleteBtn = new JButton("Delete Selected");
+        // West Panel: Table List
+        JPanel westPanel = new JPanel(new BorderLayout());
+        westPanel.setPreferredSize(new Dimension(200, 0));
+        westPanel.setBorder(BorderFactory.createTitledBorder("Database Tables"));
 
-        addBtn.addActionListener(e -> openRecordPanel(false));
-        editBtn.addActionListener(e -> openRecordPanel(true));
-        deleteBtn.addActionListener(e -> deleteSelectedRecord());
+        listModel = new DefaultListModel<>();
+        tableList = new JList<>(listModel);
+        tableList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        refreshTableList();
 
-        bottomPanel.add(addBtn);
-        bottomPanel.add(editBtn);
-        bottomPanel.add(deleteBtn);
-        add(bottomPanel, BorderLayout.SOUTH);
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem openCurrentItem = new JMenuItem("Open in Current Tab");
+        JMenuItem openNewItem = new JMenuItem("Open in New Tab");
+        JMenuItem renameItem = new JMenuItem("Rename Table");
+        JMenuItem dropItem = new JMenuItem("Drop Table");
 
-        if (tableSelector.getItemCount() > 0) {
-            tableSelector.setSelectedIndex(0); // Triggers refreshTable()
-        }
+        openCurrentItem.addActionListener(e -> openTableInTab(tableList.getSelectedValue(), false));
+        openNewItem.addActionListener(e -> openTableInTab(tableList.getSelectedValue(), true));
+        renameItem.addActionListener(e -> renameSelectedTable());
+        dropItem.addActionListener(e -> dropSelectedTable());
+
+        popupMenu.add(openCurrentItem);
+        popupMenu.add(openNewItem);
+        popupMenu.addSeparator();
+        popupMenu.add(renameItem);
+        popupMenu.add(dropItem);
+
+        tableList.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) { showPopup(e); }
+            public void mouseReleased(MouseEvent e) { showPopup(e); }
+            private void showPopup(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int row = tableList.locationToIndex(e.getPoint());
+                    if (row != -1) {
+                        tableList.setSelectedIndex(row);
+                        popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                    }
+                }
+            }
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    openTableInTab(tableList.getSelectedValue(), true);
+                }
+            }
+        });
+
+        westPanel.add(new JScrollPane(tableList), BorderLayout.CENTER);
+
+        JButton createTableBtn = new JButton("Create New Table");
+        createTableBtn.addActionListener(e -> openCreateTableDialog());
+        westPanel.add(createTableBtn, BorderLayout.SOUTH);
+
+        add(westPanel, BorderLayout.WEST);
 
         setVisible(true);
     }
 
-    private void refreshTable() {
-        if (currentTable == null || currentTable.isEmpty()) return;
+    private TableTabPanel getActiveTab() {
+        Component c = tabbedPane.getSelectedComponent();
+        if (c instanceof TableTabPanel) {
+            return (TableTabPanel) c;
+        }
+        return null;
+    }
 
-        List<String> columns = dao.getColumns(currentTable);
-        tableModel.setColumnIdentifiers(columns.toArray());
-        tableModel.setRowCount(0);
+    private void openTableInTab(String tableName, boolean newTab) {
+        if (tableName == null) return;
+        
+        if (!newTab && tabbedPane.getTabCount() > 0) {
+            int selected = tabbedPane.getSelectedIndex();
+            TableTabPanel tab = new TableTabPanel(tableName);
+            tabbedPane.setComponentAt(selected, tab);
+            tabbedPane.setTitleAt(selected, tableName);
+        } else {
+            TableTabPanel tab = new TableTabPanel(tableName);
+            tabbedPane.addTab(tableName, tab);
+            tabbedPane.setSelectedComponent(tab);
+        }
+    }
 
-        List<Map<String, Object>> records = dao.searchRecords(currentTable, currentSearchFilters);
-        for (Map<String, Object> row : records) {
-            Object[] rowData = new Object[columns.size()];
-            for (int i = 0; i < columns.size(); i++) {
-                rowData[i] = row.get(columns.get(i));
+    private void refreshTableList() {
+        listModel.clear();
+        for (String t : dao.getTables()) {
+            listModel.addElement(t);
+        }
+    }
+
+    private void renameSelectedTable() {
+        String oldName = tableList.getSelectedValue();
+        if (oldName == null) return;
+        String newName = JOptionPane.showInputDialog(this, "Enter new name for table '" + oldName + "':", oldName);
+        if (newName != null && !newName.trim().isEmpty() && !newName.equals(oldName)) {
+            if (dao.renameTable(oldName, newName)) {
+                JOptionPane.showMessageDialog(this, "Table renamed.");
+                refreshTableList();
+                // Update tabs
+                for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                    Component c = tabbedPane.getComponentAt(i);
+                    if (c instanceof TableTabPanel) {
+                        TableTabPanel tab = (TableTabPanel) c;
+                        if (tab.tableName.equals(oldName)) {
+                            tab.tableName = newName;
+                            tabbedPane.setTitleAt(i, newName);
+                        }
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to rename table.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-            tableModel.addRow(rowData);
+        }
+    }
+
+    private void dropSelectedTable() {
+        String tableName = tableList.getSelectedValue();
+        if (tableName == null) return;
+        
+        int res = JOptionPane.showConfirmDialog(this, "Are you sure you want to completely drop table '" + tableName + "'?\nThis action cannot be undone!", "Warning", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (res == JOptionPane.YES_OPTION) {
+            if (dao.dropTable(tableName)) {
+                JOptionPane.showMessageDialog(this, "Table dropped.");
+                refreshTableList();
+                // Close tabs associated with this table
+                for (int i = tabbedPane.getTabCount() - 1; i >= 0; i--) {
+                    Component c = tabbedPane.getComponentAt(i);
+                    if (c instanceof TableTabPanel) {
+                        TableTabPanel tab = (TableTabPanel) c;
+                        if (tab.tableName.equals(tableName)) {
+                            tabbedPane.removeTabAt(i);
+                        }
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to drop table.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void clearSearch() {
+        TableTabPanel tab = getActiveTab();
+        if (tab != null) {
+            tab.currentSearchFilters.clear();
+            tab.refreshTable();
         }
     }
 
     private void openSearchPanel() {
-        if (currentTable == null || currentTable.isEmpty()) return;
-        List<String> columns = dao.getColumns(currentTable);
+        TableTabPanel tab = getActiveTab();
+        if (tab == null) return;
         
+        List<String> columns = dao.getColumns(tab.tableName);
         JPanel panel = new JPanel(new GridLayout(columns.size(), 2, 5, 5));
         Map<String, JTextField> fields = new HashMap<>();
         
         for (String col : columns) {
             panel.add(new JLabel(col + ":"));
             JTextField tf = new JTextField();
-            if (currentSearchFilters.containsKey(col)) {
-                tf.setText(currentSearchFilters.get(col));
+            if (tab.currentSearchFilters.containsKey(col)) {
+                tf.setText(tab.currentSearchFilters.get(col));
             }
             fields.put(col, tf);
             panel.add(tf);
         }
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Advanced Search", JOptionPane.OK_CANCEL_OPTION);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Advanced Search: " + tab.tableName, JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
-            currentSearchFilters.clear();
+            tab.currentSearchFilters.clear();
             for (Map.Entry<String, JTextField> entry : fields.entrySet()) {
                 String val = entry.getValue().getText().trim();
                 if (!val.isEmpty()) {
-                    currentSearchFilters.put(entry.getKey(), val);
+                    tab.currentSearchFilters.put(entry.getKey(), val);
                 }
             }
-            refreshTable();
+            tab.refreshTable();
         }
     }
 
     private void openRecordPanel(boolean isEdit) {
-        if (currentTable == null || currentTable.isEmpty()) return;
+        TableTabPanel tab = getActiveTab();
+        if (tab == null) return;
         
-        int selectedRow = table.getSelectedRow();
+        int selectedRow = tab.table.getSelectedRow();
         if (isEdit && selectedRow == -1) {
             JOptionPane.showMessageDialog(this, "Select a record to edit.");
             return;
         }
 
-        List<String> columns = dao.getColumns(currentTable);
+        List<String> columns = dao.getColumns(tab.tableName);
         JPanel panel = new JPanel(new GridLayout(columns.size(), 2, 5, 5));
         Map<String, JTextField> fields = new LinkedHashMap<>();
-        
         Map<String, String> originalFilters = new HashMap<>();
 
         for (int i = 0; i < columns.size(); i++) {
@@ -206,7 +311,7 @@ public class DynamicDBManagerGUI extends JFrame {
             panel.add(new JLabel(col + ":"));
             JTextField tf = new JTextField();
             if (isEdit) {
-                Object val = tableModel.getValueAt(selectedRow, i);
+                Object val = tab.tableModel.getValueAt(selectedRow, i);
                 String strVal = (val == null) ? "" : val.toString();
                 tf.setText(strVal);
                 originalFilters.put(col, strVal);
@@ -230,25 +335,27 @@ public class DynamicDBManagerGUI extends JFrame {
             }
             
             if (isEdit) {
-                if (dao.updateRecord(currentTable, originalFilters, data)) {
+                if (dao.updateRecord(tab.tableName, originalFilters, data)) {
                     JOptionPane.showMessageDialog(this, "Record updated.");
                 } else {
                     JOptionPane.showMessageDialog(this, "Failed to update record.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             } else {
-                if (dao.insertRecord(currentTable, data)) {
+                if (dao.insertRecord(tab.tableName, data)) {
                     JOptionPane.showMessageDialog(this, "Record added.");
                 } else {
                     JOptionPane.showMessageDialog(this, "Failed to add record.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
-            refreshTable();
+            tab.refreshTable();
         }
     }
 
     private void deleteSelectedRecord() {
-        if (currentTable == null || currentTable.isEmpty()) return;
-        int selectedRow = table.getSelectedRow();
+        TableTabPanel tab = getActiveTab();
+        if (tab == null) return;
+        
+        int selectedRow = tab.table.getSelectedRow();
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(this, "Select a record to delete.");
             return;
@@ -256,27 +363,19 @@ public class DynamicDBManagerGUI extends JFrame {
 
         int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this record?", "Confirm", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
-            List<String> columns = dao.getColumns(currentTable);
+            List<String> columns = dao.getColumns(tab.tableName);
             Map<String, String> filters = new HashMap<>();
             for (int i = 0; i < columns.size(); i++) {
-                Object val = tableModel.getValueAt(selectedRow, i);
+                Object val = tab.tableModel.getValueAt(selectedRow, i);
                 if (val != null) filters.put(columns.get(i), val.toString());
             }
 
-            if (dao.deleteRecord(currentTable, filters)) {
+            if (dao.deleteRecord(tab.tableName, filters)) {
                 JOptionPane.showMessageDialog(this, "Record deleted.");
-                refreshTable();
+                tab.refreshTable();
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to delete record.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-        }
-    }
-    
-    private void refreshTableSelector() {
-        tableSelector.removeAllItems();
-        List<String> tables = dao.getTables();
-        for (String t : tables) {
-            tableSelector.addItem(t);
         }
     }
 
@@ -335,10 +434,42 @@ public class DynamicDBManagerGUI extends JFrame {
             
             if (dao.createTable(tableName, columnDefs)) {
                 JOptionPane.showMessageDialog(this, "Table '" + tableName + "' created successfully!");
-                refreshTableSelector();
-                tableSelector.setSelectedItem(tableName);
+                refreshTableList();
+                openTableInTab(tableName, true);
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to create table.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    // Inner class representing a tab
+    class TableTabPanel extends JPanel {
+        String tableName;
+        JTable table;
+        DefaultTableModel tableModel;
+        Map<String, String> currentSearchFilters = new HashMap<>();
+
+        public TableTabPanel(String tableName) {
+            this.tableName = tableName;
+            setLayout(new BorderLayout());
+            tableModel = new DefaultTableModel();
+            table = new JTable(tableModel);
+            add(new JScrollPane(table), BorderLayout.CENTER);
+            refreshTable();
+        }
+
+        public void refreshTable() {
+            List<String> columns = dao.getColumns(tableName);
+            tableModel.setColumnIdentifiers(columns.toArray());
+            tableModel.setRowCount(0);
+
+            List<Map<String, Object>> records = dao.searchRecords(tableName, currentSearchFilters);
+            for (Map<String, Object> row : records) {
+                Object[] rowData = new Object[columns.size()];
+                for (int i = 0; i < columns.size(); i++) {
+                    rowData[i] = row.get(columns.get(i));
+                }
+                tableModel.addRow(rowData);
             }
         }
     }
