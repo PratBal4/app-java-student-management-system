@@ -99,9 +99,11 @@ If you prefer a terminal-based interface (which is particularly great for headle
 
 ## Features
 - **Dual Interfaces:** Seamlessly switch between a full desktop GUI or a fast interactive CLI.
+- **Tabbed Workspace & Side Panel (GUI):** Open multiple tables simultaneously in separate tabs. Easily navigate your database using the interactive side panel with built-in context menus and automatic data synchronization across all open tabs.
+- **Formatted Data Grids (CLI):** Terminal outputs are dynamically formatted into perfectly aligned, responsive ASCII grids, complete with interactive pagination (up/down/exit) for scrolling through large datasets.
 - **Dynamic Schema Discovery:** Reads any SQLite database and auto-generates UI components based on `PRAGMA` queries.
+- **Built-in SQL Editor:** Execute raw scripts with batch processing. The GUI features a split-pane editor that dynamically parses `SELECT` queries into scrollable `JTable` tabs, while the CLI provides sequential execution with smart pagination.
 - **DDL Table Creation:** Dynamically construct and create tables with custom datatypes and constraints directly from the app.
-- **Built-in SQL Editor:** Execute raw scripts with batch processing and dynamic result table generation in both GUI and CLI modes.
 - **CRUD Operations:** Accurately target and manipulate rows via dynamic insertions, updates, advanced multi-column filtering, and deletion.
 
 ## Docker Support
