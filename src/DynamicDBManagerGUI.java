@@ -90,18 +90,32 @@ public class DynamicDBManagerGUI extends JFrame {
 
         // Top Panel: Actions for active tab
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton switchDbBtn = new JButton("Switch Database");
+        JButton refreshBtn = new JButton("Refresh Data");
         JButton searchBtn = new JButton("Advanced Search");
         JButton clearSearchBtn = new JButton("Clear Search");
         JButton addBtn = new JButton("Add Record");
         JButton editBtn = new JButton("Edit Selected");
         JButton deleteBtn = new JButton("Delete Selected");
 
+        switchDbBtn.addActionListener(e -> {
+            dispose();
+            new DynamicDBManagerGUI().start();
+        });
+        refreshBtn.addActionListener(e -> {
+            TableTabPanel tab = getActiveTab();
+            if (tab != null) tab.refreshTable();
+        });
         searchBtn.addActionListener(e -> openSearchPanel());
         clearSearchBtn.addActionListener(e -> clearSearch());
         addBtn.addActionListener(e -> openRecordPanel(false));
         editBtn.addActionListener(e -> openRecordPanel(true));
         deleteBtn.addActionListener(e -> deleteSelectedRecord());
 
+        topPanel.add(switchDbBtn);
+        topPanel.add(new JSeparator(SwingConstants.VERTICAL));
+        topPanel.add(refreshBtn);
+        topPanel.add(new JSeparator(SwingConstants.VERTICAL));
         topPanel.add(addBtn);
         topPanel.add(editBtn);
         topPanel.add(deleteBtn);
@@ -114,6 +128,10 @@ public class DynamicDBManagerGUI extends JFrame {
         // Center Panel: Tabbed Pane
         tabbedPane = new JTabbedPane();
         add(tabbedPane, BorderLayout.CENTER);
+
+        // Add permanent SQL Editor Tab
+        SqlEditorTabPanel sqlTab = new SqlEditorTabPanel();
+        tabbedPane.addTab(">_ SQL Editor", sqlTab);
 
         // West Panel: Table List
         JPanel westPanel = new JPanel(new BorderLayout());
@@ -185,14 +203,46 @@ public class DynamicDBManagerGUI extends JFrame {
         
         if (!newTab && tabbedPane.getTabCount() > 0) {
             int selected = tabbedPane.getSelectedIndex();
+            if (tabbedPane.getComponentAt(selected) instanceof SqlEditorTabPanel) {
+                newTab = true;
+            }
+        }
+        
+        if (!newTab && tabbedPane.getTabCount() > 0) {
+            int selected = tabbedPane.getSelectedIndex();
             TableTabPanel tab = new TableTabPanel(tableName);
             tabbedPane.setComponentAt(selected, tab);
-            tabbedPane.setTitleAt(selected, tableName);
+            tabbedPane.setTabComponentAt(selected, createTabHeader(tableName, tab));
         } else {
             TableTabPanel tab = new TableTabPanel(tableName);
             tabbedPane.addTab(tableName, tab);
+            int index = tabbedPane.indexOfComponent(tab);
+            tabbedPane.setTabComponentAt(index, createTabHeader(tableName, tab));
             tabbedPane.setSelectedComponent(tab);
         }
+    }
+
+    private JPanel createTabHeader(String title, TableTabPanel tab) {
+        JPanel tabHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        tabHeader.setOpaque(false);
+        JLabel titleLbl = new JLabel(title + " ");
+        JButton closeBtn = new JButton("x");
+        closeBtn.setMargin(new Insets(0, 2, 0, 2));
+        closeBtn.setBorder(BorderFactory.createEmptyBorder());
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setFocusable(false);
+        closeBtn.setForeground(Color.GRAY);
+        closeBtn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { closeBtn.setForeground(Color.RED); }
+            public void mouseExited(MouseEvent e) { closeBtn.setForeground(Color.GRAY); }
+        });
+        closeBtn.addActionListener(e -> {
+            int i = tabbedPane.indexOfComponent(tab);
+            if (i != -1) tabbedPane.removeTabAt(i);
+        });
+        tabHeader.add(titleLbl);
+        tabHeader.add(closeBtn);
+        return tabHeader;
     }
 
     private void refreshTableList() {
@@ -217,7 +267,7 @@ public class DynamicDBManagerGUI extends JFrame {
                         TableTabPanel tab = (TableTabPanel) c;
                         if (tab.tableName.equals(oldName)) {
                             tab.tableName = newName;
-                            tabbedPane.setTitleAt(i, newName);
+                            tabbedPane.setTabComponentAt(i, createTabHeader(newName, tab));
                         }
                     }
                 }
@@ -347,7 +397,7 @@ public class DynamicDBManagerGUI extends JFrame {
                     JOptionPane.showMessageDialog(this, "Failed to add record.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
-            tab.refreshTable();
+            refreshAllTabs(tab.tableName);
         }
     }
 
@@ -372,9 +422,21 @@ public class DynamicDBManagerGUI extends JFrame {
 
             if (dao.deleteRecord(tab.tableName, filters)) {
                 JOptionPane.showMessageDialog(this, "Record deleted.");
-                tab.refreshTable();
+                refreshAllTabs(tab.tableName);
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to delete record.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void refreshAllTabs(String tableName) {
+        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+            Component c = tabbedPane.getComponentAt(i);
+            if (c instanceof TableTabPanel) {
+                TableTabPanel t = (TableTabPanel) c;
+                if (t.tableName.equals(tableName)) {
+                    t.refreshTable();
+                }
             }
         }
     }
@@ -415,7 +477,10 @@ public class DynamicDBManagerGUI extends JFrame {
         // Add initial row
         addRowBtn.doClick();
 
-        mainPanel.add(new JScrollPane(columnsPanel));
+        JScrollPane scrollPane = new JScrollPane(columnsPanel);
+        scrollPane.setPreferredSize(new Dimension(600, 300));
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        mainPanel.add(scrollPane);
         mainPanel.add(addRowBtn);
 
         int result = JOptionPane.showConfirmDialog(this, mainPanel, "Create Table: " + tableName, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
@@ -470,6 +535,82 @@ public class DynamicDBManagerGUI extends JFrame {
                     rowData[i] = row.get(columns.get(i));
                 }
                 tableModel.addRow(rowData);
+            }
+        }
+    }
+
+    class SqlEditorTabPanel extends JPanel {
+        JTextArea editorArea;
+        JTabbedPane resultTabs;
+        JTextArea messageArea;
+
+        public SqlEditorTabPanel() {
+            setLayout(new BorderLayout());
+            
+            JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JButton execBtn = new JButton("Execute All");
+            JButton clearBtn = new JButton("Clear");
+            topBar.add(execBtn);
+            topBar.add(clearBtn);
+            
+            editorArea = new JTextArea();
+            editorArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+            
+            resultTabs = new JTabbedPane();
+            messageArea = new JTextArea();
+            messageArea.setEditable(false);
+            messageArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+            resultTabs.addTab("Messages", new JScrollPane(messageArea));
+            
+            JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(editorArea), resultTabs);
+            splitPane.setResizeWeight(0.6);
+            
+            add(topBar, BorderLayout.NORTH);
+            add(splitPane, BorderLayout.CENTER);
+            
+            clearBtn.addActionListener(e -> editorArea.setText(""));
+            execBtn.addActionListener(e -> executeScript());
+        }
+        
+        private void executeScript() {
+            String script = editorArea.getText().trim();
+            if (script.isEmpty()) return;
+            
+            while (resultTabs.getTabCount() > 1) {
+                resultTabs.removeTabAt(1);
+            }
+            messageArea.setText("Executing script...\n");
+            
+            List<DynamicDAO.QueryResult> results = dao.executeRawScript(script);
+            int resultIndex = 1;
+            for (int i = 0; i < results.size(); i++) {
+                DynamicDAO.QueryResult res = results.get(i);
+                if (res.message != null && !res.message.isEmpty()) {
+                    messageArea.append("Query " + (i+1) + ": " + res.message + "\n");
+                } else if (res.isResultSet) {
+                    messageArea.append("Query " + (i+1) + ": Returned " + res.rows.size() + " rows.\n");
+                    
+                    DefaultTableModel tm = new DefaultTableModel();
+                    tm.setColumnIdentifiers(res.columns.toArray());
+                    for (Map<String, Object> r : res.rows) {
+                        Object[] rowData = new Object[res.columns.size()];
+                        for (int c = 0; c < res.columns.size(); c++) {
+                            rowData[c] = r.get(res.columns.get(c));
+                        }
+                        tm.addRow(rowData);
+                    }
+                    JTable t = new JTable(tm);
+                    resultTabs.addTab("Result " + resultIndex++, new JScrollPane(t));
+                } else {
+                    messageArea.append("Query " + (i+1) + ": " + res.affectedRows + " rows affected.\n");
+                }
+            }
+            refreshTableList();
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                Component c = tabbedPane.getComponentAt(i);
+                if (c instanceof TableTabPanel) {
+                    ((TableTabPanel) c).refreshTable();
+                }
             }
         }
     }

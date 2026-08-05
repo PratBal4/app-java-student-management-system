@@ -2,7 +2,7 @@
 
 A powerful, dynamically-rendered desktop application and CLI tool built using Java (Swing) for managing ANY SQLite database.
 
-## 🚀 Future Additions & Roadmap
+## Future Additions & Roadmap
 
 This project is continuously evolving. The following features are planned for future distribution:
 - **Pre-defined Templates:** One-click table generation for common systems (Schools, Inventory, Businesses).
@@ -10,28 +10,28 @@ This project is continuously evolving. The following features are planned for fu
 - **Enhanced UI/UX:** Better GUI frameworks and styling for a more modern desktop experience.
 - **MCP Server & Automation:** Integration with a Model Context Protocol (MCP) server for AI-driven database automation and autonomous data entry.
 
-## 🏗 Project Architecture & Internal Workings
+## Project Architecture & Internal Workings
 
-This project utilizes a completely dynamic DAO (Data Access Object) architecture, capable of reading and manipulating any SQLite database schema on the fly!
+This project utilizes a completely dynamic DAO (Data Access Object) architecture, capable of reading and manipulating any SQLite database schema on the fly.
 
 1. **`Main.java` (Entrypoint):**
    - Routes execution to either the graphical UI (`DynamicDBManagerGUI`) or the command-line interface (`DynamicDBManagerCLI`) based on startup arguments.
 2. **`DynamicDBManagerGUI.java` (Graphical UI):** 
    - Uses `JOptionPane` to prompt database selection at startup.
    - Dynamically builds `JTable` columns and Advanced Search side panels by interrogating the selected database table schema.
+   - Features a built-in SQL Editor tab with dynamic result set visualization.
 3. **`DynamicDBManagerCLI.java` (Command Line UI):**
    - Provides an interactive text-based menu for terminal users.
-   - Features paginated results and an incremental Advanced Search filter (using the `add` keyword).
+   - Features ASCII grid formatting, paginated results, and a sequential SQL Editor mode.
 4. **`DynamicDAO.java` (Data Access Object):**
    - Connects to the SQLite database.
    - Uses native `SELECT name FROM sqlite_master` and `PRAGMA table_info()` queries to discover tables and columns dynamically.
-   - Executes dynamic `INSERT`, `SELECT`, `UPDATE`, and `DELETE` commands based on maps of data.
+   - Executes dynamic `INSERT`, `SELECT`, `UPDATE`, `DELETE`, and raw script batch commands.
 
-
-## 📁 Project Structure
+## Project Structure
 
 ```text
-📁 DynamicDatabaseManager/
+DynamicDatabaseManager/
 ├── database/                (Local Database Storage - Ignored by Git)
 │   └── (Databases you create or open will be saved here)
 ├── lib/
@@ -50,10 +50,10 @@ This project utilizes a completely dynamic DAO (Data Access Object) architecture
 └── Dockerfile               (Docker container specification)
 ```
 
-## 🚀 Setup & Execution
+## Setup & Execution
 
 ### 1. Building the Project
-Before running the application, you must compile the Java source files. Build scripts are provided that will intelligently check if Java is installed and offer to automatically install it via `brew`, `apt`, or `winget` if it is missing!
+Before running the application, you must compile the Java source files. Build scripts are provided that will intelligently check if Java is installed and offer to automatically install it via `brew`, `apt`, or `winget` if it is missing.
 
 **On macOS / Linux:**
 1. Open your terminal in the project directory.
@@ -97,15 +97,16 @@ If you prefer a terminal-based interface (which is particularly great for headle
 .\run.bat CLI
 ```
 
-## ✨ Features
+## Features
 - **Dual Interfaces:** Seamlessly switch between a full desktop GUI or a fast interactive CLI.
 - **Dynamic Schema Discovery:** Reads any SQLite database and auto-generates UI components based on `PRAGMA` queries.
 - **DDL Table Creation:** Dynamically construct and create tables with custom datatypes and constraints directly from the app.
+- **Built-in SQL Editor:** Execute raw scripts with batch processing and dynamic result table generation in both GUI and CLI modes.
 - **CRUD Operations:** Accurately target and manipulate rows via dynamic insertions, updates, advanced multi-column filtering, and deletion.
 
-## 🐳 Docker Support
+## Docker Support
 
-To avoid the complexity of setting up desktop environments and X11 forwarding, the Docker container is designed to run the Command Line Interface (CLI) out of the box. This provides a fast, fully-functional headless database manager!
+To avoid the complexity of setting up desktop environments and X11 forwarding, the Docker container is designed to run the Command Line Interface (CLI) out of the box. This provides a fast, fully-functional headless database manager.
 
 ### 1. Build the Docker Image
 ```bash
@@ -118,7 +119,7 @@ Run the container interactively:
 docker run -it --rm dynamic-db-manager CLI
 ```
 
-## 🤝 Git & Collaboration
+## Git & Collaboration
 This project has been initialized as a Git repository. To collaborate and push this to a remote private repository, you can run the following commands:
 ```bash
 git remote add origin <YOUR_PRIVATE_REPO_URL>

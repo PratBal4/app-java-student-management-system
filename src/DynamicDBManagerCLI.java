@@ -94,12 +94,17 @@ public class DynamicDBManagerCLI {
             }
             System.out.println("0. Back to Database Selection");
             System.out.println("C. Create New Table");
+            System.out.println("E. SQL Editor");
             System.out.print("Select an option: ");
             
             String input = scanner.nextLine().trim().toUpperCase();
             if (input.equals("0")) return;
             if (input.equals("C")) {
                 createTableFromCLI();
+                continue;
+            }
+            if (input.equals("E")) {
+                sqlEditorMode();
                 continue;
             }
             
@@ -209,6 +214,58 @@ public class DynamicDBManagerCLI {
         handlePagination(tableName, filters);
     }
 
+    private static void printGrid(List<String> columns, List<Map<String, Object>> records, int startIdx, int pageSize) {
+        if (records.isEmpty()) {
+            System.out.println("No records found.");
+            return;
+        }
+
+        int endIdx = Math.min(startIdx + pageSize, records.size());
+        List<Map<String, Object>> pageRecords = records.subList(startIdx, endIdx);
+
+        Map<String, Integer> colWidths = new HashMap<>();
+        for (String col : columns) {
+            colWidths.put(col, col.length());
+        }
+
+        for (Map<String, Object> row : pageRecords) {
+            for (String col : columns) {
+                Object val = row.get(col);
+                String strVal = (val == null) ? "NULL" : val.toString();
+                if (strVal.length() > colWidths.get(col)) {
+                    colWidths.put(col, strVal.length());
+                }
+            }
+        }
+
+        StringBuilder separator = new StringBuilder("+");
+        for (String col : columns) {
+            for (int i = 0; i < colWidths.get(col) + 2; i++) separator.append("-");
+            separator.append("+");
+        }
+
+        System.out.println(separator.toString());
+        
+        System.out.print("|");
+        for (String col : columns) {
+            System.out.printf(" %-" + colWidths.get(col) + "s |", col);
+        }
+        System.out.println();
+        
+        System.out.println(separator.toString());
+
+        for (Map<String, Object> row : pageRecords) {
+            System.out.print("|");
+            for (String col : columns) {
+                Object val = row.get(col);
+                String strVal = (val == null) ? "NULL" : val.toString();
+                System.out.printf(" %-" + colWidths.get(col) + "s |", strVal);
+            }
+            System.out.println();
+        }
+        System.out.println(separator.toString());
+    }
+
     private static void handlePagination(String tableName, Map<String, String> currentFilters) {
         List<String> columns = dao.getColumns(tableName);
         int currentIndex = 0;
@@ -221,14 +278,7 @@ public class DynamicDBManagerCLI {
                 System.out.println("\nNo records found with current filters.");
             } else {
                 System.out.println("\n--- Records (" + (currentIndex + 1) + " to " + Math.min(currentIndex + pageSize, results.size()) + " of " + results.size() + ") ---");
-                for (int i = currentIndex; i < Math.min(currentIndex + pageSize, results.size()); i++) {
-                    Map<String, Object> row = results.get(i);
-                    StringBuilder sb = new StringBuilder();
-                    for (String col : columns) {
-                        sb.append(col).append(": ").append(row.get(col)).append(" | ");
-                    }
-                    System.out.println(sb.toString());
-                }
+                printGrid(columns, results, currentIndex, pageSize);
             }
 
             System.out.print("\nEnter command ('up', 'down', 'add' filter, 'modify', 'delete', 'exit'): ");
@@ -308,6 +358,61 @@ public class DynamicDBManagerCLI {
             System.out.println("Success: Record modified.");
         } else {
             System.out.println("Error: Could not modify record. No modifications made.");
+        }
+    }
+
+    private static void sqlEditorMode() {
+        System.out.println("\n--- SQL Editor ---");
+        System.out.println("Type your SQL commands (end with semicolon). Type 'exit' on a new line to quit.");
+        while (true) {
+            System.out.print("sql> ");
+            String cmd = scanner.nextLine().trim();
+            if (cmd.equalsIgnoreCase("exit")) {
+                break;
+            }
+            if (cmd.isEmpty()) continue;
+
+            List<DynamicDAO.QueryResult> results = dao.executeRawScript(cmd);
+            for (int i = 0; i < results.size(); i++) {
+                DynamicDAO.QueryResult res = results.get(i);
+                if (res.message != null && !res.message.isEmpty()) {
+                    System.out.println(res.message);
+                } else if (res.isResultSet) {
+                    System.out.println("Returned " + res.rows.size() + " rows.");
+                    if (res.rows.size() > 10) {
+                        handleSqlPagination(res.columns, res.rows);
+                    } else {
+                        printGrid(res.columns, res.rows, 0, res.rows.size());
+                    }
+                } else {
+                    System.out.println("Query executed successfully. " + res.affectedRows + " rows affected.");
+                }
+            }
+        }
+    }
+
+    private static void handleSqlPagination(List<String> columns, List<Map<String, Object>> records) {
+        int currentIndex = 0;
+        int pageSize = 10;
+
+        while (true) {
+            System.out.println("\n--- Result Page (" + (currentIndex + 1) + " to " + Math.min(currentIndex + pageSize, records.size()) + " of " + records.size() + ") ---");
+            printGrid(columns, records, currentIndex, pageSize);
+
+            System.out.print("\nEnter command ('up', 'down', 'exit' to stop scrolling): ");
+            String cmd = scanner.nextLine().trim().toLowerCase();
+
+            if (cmd.equals("exit")) {
+                return;
+            } else if (cmd.equals("down")) {
+                if (currentIndex + pageSize < records.size()) currentIndex += pageSize;
+                else System.out.println("At end of list.");
+            } else if (cmd.equals("up")) {
+                if (currentIndex - pageSize >= 0) currentIndex -= pageSize;
+                else System.out.println("At beginning of list.");
+            } else {
+                System.out.println("Invalid command. Use 'up', 'down', or 'exit'.");
+            }
         }
     }
 }

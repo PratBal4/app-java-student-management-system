@@ -5,8 +5,60 @@ import java.util.*;
 public class DynamicDAO {
     private String dbPath;
 
+    public static class QueryResult {
+        public boolean isResultSet = false;
+        public List<String> columns = new ArrayList<>();
+        public List<Map<String, Object>> rows = new ArrayList<>();
+        public int affectedRows = 0;
+        public String message = "";
+    }
+
     public DynamicDAO(String dbPath) {
         this.dbPath = dbPath;
+    }
+
+    public List<QueryResult> executeRawScript(String script) {
+        List<QueryResult> results = new ArrayList<>();
+        String[] queries = script.split(";");
+        try (Connection conn = connect();
+             Statement stmt = conn.createStatement()) {
+            for (String q : queries) {
+                String sql = q.trim();
+                if (sql.isEmpty()) continue;
+                
+                QueryResult result = new QueryResult();
+                try {
+                    boolean hasResultSet = stmt.execute(sql);
+                    if (hasResultSet) {
+                        result.isResultSet = true;
+                        try (ResultSet rs = stmt.getResultSet()) {
+                            ResultSetMetaData rsmd = rs.getMetaData();
+                            int columnCount = rsmd.getColumnCount();
+                            for (int i = 1; i <= columnCount; i++) {
+                                result.columns.add(rsmd.getColumnName(i));
+                            }
+                            while (rs.next()) {
+                                Map<String, Object> row = new LinkedHashMap<>();
+                                for (String col : result.columns) {
+                                    row.put(col, rs.getObject(col));
+                                }
+                                result.rows.add(row);
+                            }
+                        }
+                    } else {
+                        result.affectedRows = stmt.getUpdateCount();
+                    }
+                } catch (SQLException e) {
+                    result.message = e.getMessage();
+                }
+                results.add(result);
+            }
+        } catch (SQLException e) {
+            QueryResult err = new QueryResult();
+            err.message = "Connection Error: " + e.getMessage();
+            results.add(err);
+        }
+        return results;
     }
 
     private Connection connect() throws SQLException {
